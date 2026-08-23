@@ -57,6 +57,19 @@ def fonts_present(*names):
     return {n: (n in found) for n in names}
 
 
+_EN_MONTHS = ("January", "February", "March", "April", "May", "June", "July",
+              "August", "September", "October", "November", "December")
+_FA_MONTHS = ("ژانویه", "فوریه",
+              "مارس", "آوریل",
+              "مه", "ژوئن", "ژوئیه",
+              "آگوست", "سپتامبر",
+              "اکتبر", "نوامبر",
+              "دسامبر")
+_FR_MONTHS = ("janvier", "février", "mars", "avril", "mai", "juin",
+              "juillet", "août", "septembre", "octobre", "novembre",
+              "décembre")
+
+
 _DIGITS = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
 
 
@@ -73,16 +86,30 @@ def fa_quotes(text):
 
 
 def fa_digits(text):
-    """Persian digits. Skip inside [...] placeholders and $ amounts."""
-    out, keep = [], False
-    for ch in text:
-        if ch in "[$":
-            keep = True
-        elif ch in "]" or (keep and ch == " "):
-            keep = False
-        out.append(ch if keep else ch.translate(_DIGITS))
-    return "".join(out)
+    """Persian digits — but not everywhere.
 
+    Latin digits stay Latin in four places: inside a [...] placeholder, in an
+    amount written with a currency sign, in an English date, and anywhere a
+    Latin word owns the number (a version, a figure, a file name). A date
+    reading "August ۲۱" is the worst of both languages and cannot be
+    checked against its English original.
+    """
+    protect = [
+        r"\[[^\]]*\]",
+        r"[$€£]\s?[\d,.]+",
+        r"(?:" + "|".join(_EN_MONTHS) + r")\s+\d{1,2}(?:\s*,)?\s*\d{4}",
+        r"[A-Za-z][A-Za-z.\-]*\s*\d[\d,.:/\-]*|\d+\.\d[\d.]*",
+        r"\d[\d,.:/\-]*\s*[A-Za-z]",
+    ]
+    spans = []
+    for pat in protect:
+        spans += [m.span() for m in re.finditer(pat, text)]
+
+    def kept(i):
+        return any(a <= i < b for a, b in spans)
+
+    return "".join(ch if kept(i) else ch.translate(_DIGITS)
+                   for i, ch in enumerate(text))
 
 
 ZWNJ = "‌"
@@ -93,9 +120,9 @@ _LETTERS = {"ي": "ی", "ك": "ک", "ة": "ه",
             "٦": "۶", "٧": "۷", "٨": "۸",
             "٩": "۹"}
 
-_PREFIX = ("می", "نمی")            # می، نمی
+_PREFIX = ("می", "نمی")
 _SUFFIX = ("ها", "های", "هایی",
-           "تر", "ترین")     # ها، های، هایی، تر، ترین
+           "تر", "ترین")
 
 
 def normalize(text):
@@ -154,17 +181,7 @@ ABROAD_MARKERS = (
     "انتاریو", "دلار", "یورو",
 )
 
-_EN_MONTHS = ("January", "February", "March", "April", "May", "June", "July",
-              "August", "September", "October", "November", "December")
-_FA_MONTHS = ("ژانویه", "فوریه",
-              "مارس", "آوریل",
-              "مه", "ژوئن", "ژوئیه",
-              "آگوست", "سپتامبر",
-              "اکتبر", "نوامبر",
-              "دسامبر")
-_FR_MONTHS = ("janvier", "février", "mars", "avril", "mai", "juin",
-              "juillet", "août", "septembre", "octobre", "novembre",
-              "décembre")
+
 
 
 def detect_audience(text):
