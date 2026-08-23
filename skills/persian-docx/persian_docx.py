@@ -26,6 +26,9 @@ FALLBACK = "Tahoma"
 BULLET = "•"          # Word's own list renders as "/" in RTL Persian, and
                             # an arrow glyph reads as Word's collapse marker
 
+LATIN_DEFAULTS = ("Calibri", "Times New Roman", "Arial", "Cambria",
+                  "Aptos", "Segoe UI", "")
+
 VAZIRMATN_URL = "https://github.com/rastikerdar/vazirmatn/releases"
 
 
@@ -209,6 +212,39 @@ def convert_months(text, to="en"):
     return text
 
 
+
+_FA_DIGITS_RE = "[۰-۹]"
+
+
+def fa_date(text):
+    """Persian word order for a date written in Persian prose.
+
+    "August ۲۳، ۲۰۲۶" is the worst of both languages: an English
+    month name, Persian digits and American word order. In Persian the day
+    comes first and the year is introduced: ۲۳ام آگوست سال ۲۰۲۶.
+    """
+    names = "|".join(_EN_MONTHS)
+    def swap(m):
+        mon, day, year = m.group("mon"), m.group("day"), m.group("year")
+        i = [n.lower() for n in _EN_MONTHS].index(mon.lower())
+        return "%sام %s سال %s" % (day, _FA_MONTHS[i], year)
+    pat = (r"(?P<mon>" + names + r")\s+(?P<day>" + _FA_DIGITS_RE +
+           r"{1,2})\s*[،,]?\s*(?P<year>" + _FA_DIGITS_RE + r"{4})")
+    return re.sub(pat, swap, text, flags=re.IGNORECASE)
+
+
+def mixed_dates(text):
+    """Report dates that mix the two languages — an English month name sitting
+    beside Persian digits, or a Persian month beside Latin ones."""
+    out = []
+    names = "|".join(_EN_MONTHS)
+    for m in re.finditer(r"(?:" + names + r")\s*" + _FA_DIGITS_RE, text, re.I):
+        out.append("English month with Persian digits: " + m.group(0))
+    for m in re.finditer(r"(?:" + "|".join(_FA_MONTHS) + r")\s*\d", text):
+        out.append("Persian month with Latin digits: " + m.group(0))
+    return out
+
+
 def _rtl_paragraph(p):
     pPr = p._p.get_or_add_pPr()
     bidi = OxmlElement("w:bidi")
@@ -301,6 +337,8 @@ class PersianDoc:
             style = month_style(self.audience)
             if style in ("fa", "en"):
                 text = convert_months(text, to=style)
+            if style == "fa":
+                text = fa_date(text)
         run = p.add_run(fa_digits(text) if self.digits else text)
         run.bold = bold
         if size:
@@ -381,15 +419,23 @@ def audit(path):
         if val not in ("start", "both", "center"):
             issues.append((i, "alignment %s — use start/both/center" % val,
                            p.text[:40]))
+        for bad in mixed_dates(p.text):
+            issues.append((i, bad, p.text[:40]))
         if '"' in p.text:
             issues.append((i, 'straight quote — use « »', p.text[:40]))
         for r in p.runs[:1]:
             rPr = r._element.rPr
             if rPr is None or rPr.find(qn("w:rtl")) is None:
                 issues.append((i, "run not rtl", p.text[:40]))
-            elif rPr.find(qn("w:rFonts")) is None or \
-                    rPr.find(qn("w:rFonts")).get(qn("w:cs")) not in (FONT, TITLE_FONT):
-                issues.append((i, "cs font not Persian", p.text[:40]))
+            else:
+                rf = rPr.find(qn("w:rFonts"))
+                cs = None if rf is None else rf.get(qn("w:cs"))
+                # Any face is fine if it was chosen deliberately. A Latin
+                # default here means the complex-script slot was never set and
+                # every Persian glyph silently falls back to Word's own font.
+                if not cs or cs in LATIN_DEFAULTS:
+                    issues.append((i, "no complex-script font (cs=%s)" % cs,
+                                   p.text[:40]))
     if heads == 0:
         issues.append((0, "no real headings — Word sees no structure", ""))
     return issues

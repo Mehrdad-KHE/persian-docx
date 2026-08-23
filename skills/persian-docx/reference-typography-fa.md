@@ -47,7 +47,7 @@ suffixes · بی/هم prefixes.
 - **Persian digits in prose**: ۱۴۵۰، ۲۳ درصد.
 - **Thousands separator is ٬** (U+066C), not the Latin comma: ۷۸٬۰۰۰.
 - **Latin digits stay Latin** inside a version number, a file name, a phone
-  number, a postal code, an amount in a foreign currency (`$78,000`), and inside
+  number, a postal code, an amount in a foreign currency (`$12,500`), and inside
   a `[...]` placeholder — a blank reading `[۱۲]` is one nobody can fill.
 - **Percent**: «۲۳ درصد» in prose; the ٪ sign only in tables.
 

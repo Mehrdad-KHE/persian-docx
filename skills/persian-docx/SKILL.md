@@ -25,12 +25,13 @@ import sys, os
 sys.path.insert(0, os.path.dirname(__file__))   # the folder this SKILL.md is in
 from persian_docx import PersianDoc
 
-d = PersianDoc("قراردادِ شراکت")
+d = PersianDoc()
+d.title("قراردادِ نمونه")
 d.h2("بخش ۱ — طرفین")
-d.p("این قرارداد بین مهرداد و [نامِ کامل] بسته می‌شود.")
+d.p("این قرارداد میان [نامِ طرفِ اول] و [نامِ طرفِ دوم] بسته می‌شود.")
 d.bullet("مالکیتِ نرم‌افزار منتقل نمی‌شود.")
 d.page_break()
-d.save(r"D:\path\out.docx")
+d.save("out.docx")
 ```
 
 `PersianDoc(digits=True)` · `title` `h1` `h2` `h3` `p` `bullet` `page_break`
@@ -81,7 +82,7 @@ heading, not the file. Click the triangle beside it.
 # Part 2 — the writing
 
 **Think in Persian and write. Never build the sentence in English first.** The
-tell is unmistakable and the owner has named it: «این در یک‌طرفه نیست», «روی شن
+tell is unmistakable and a Persian reader names it at once: «این در یک‌طرفه نیست», «روی شن
 ساخته می‌شود» — each one an English idiom carried across word by word. A Persian
 reader does not think with them.
 
@@ -112,14 +113,14 @@ PersianDoc(audience="abroad")   # months converted as the document is built
 
 `detect_audience` reads the markers already in the text — تهران، ریال، قانون
 مدنی، کد ملی، شمسی on one side; Ontario, CAD, HST, Inc., کانادا, دلار on the
-other. **When it returns `unknown`, ask the owner. Never guess** — a wrong month
+other. **When it returns `unknown`, ask. Never guess** — a wrong month
 on a document an office must act on cannot be checked against its source.
 
 | | inside Iran | outside |
 |---|---|---|
 | months | Persian names | the language of the country the paper lives in |
 | calendar | Jalali is what the reader expects | keep the source's Gregorian date, unchanged |
-| currency | ریال / تومان | named in full: `CAD 78,000` |
+| currency | ریال / تومان | named in full: `CAD 12,500` |
 | governing text | the Persian is the contract | the Persian is a translation — say so at the top |
 
 `convert_months(text, to="fa"|"en"|"fr")` translates the names in either
@@ -131,22 +132,22 @@ For a translated contract, put the governing-text line at the top:
 «متن انگلیسی مبنای امضا و تفسیر است؛ این ترجمه برای فهم طرفین تهیه شده است.»
 
 **Months — the rule has two halves, and using the wrong half is a real error.**
-- **Persian month names** (آگوست, سپتامبر, نوامبر) belong in prose written *for*
-  the owner: a report, an explanation, a summary of what happened.
+- **Persian month names** (آگوست, سپتامبر, نوامبر) belong in prose written for a
+  Persian reader: a report, an explanation, a summary of what happened.
 - **English month names** (August, September, November) belong in anything that
-  lives in the Canadian world or comes from an English source: a contract, a
+  lives in an English-speaking jurisdiction or comes from an English source: a contract, a
   date that will be read by a bank or a lawyer or a government office, a
   deadline copied from an English letter, a translated article. Writing
-  «۲۱ آگوست» on a document a Canadian office will act on is worse than useless —
+  «۲۱ آگوست» on a document a foreign office will act on is worse than useless —
   it does not match the source and cannot be checked against it.
-- **Never French month names** (août, septembre). Canada is bilingual; the
-  owner's documents are not. English.
+- **Never French month names** (août, septembre). Canada being bilingual is not
+  a reason; use the language the document is actually read in.
 - A date that must stay verifiable keeps its original form: `August 21, 2026`.
 
 **In a legal or contractual document, add one line under each clause saying what
 that clause actually does.** The reader should never have to decode a clause to
 learn its effect. That line is Persian, plain, and about consequence — «اگر این
-بند نباشد، نصفِ نرم‌افزار مالِ او می‌شود» beats a restatement of the clause.
+بند نباشد، نصفِ دارایی مالِ طرفِ مقابل می‌شود» beats a restatement of the clause.
 
 **Say the number.** «مبلغِ قابلِ توجهی» tells the reader nothing; «۷۸ هزار دلار»
 tells them everything. Where the number is not known yet, leave the `[...]`
