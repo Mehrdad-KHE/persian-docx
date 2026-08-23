@@ -12,6 +12,7 @@ Set TITLE_FONT, or PERSIAN_DOCX_TITLE_FONT in the environment, to use a display
 face you have a licence for. fonts_present() reports what is actually installed.
 """
 import os
+import re
 import glob
 from docx import Document
 from docx.shared import Pt, Cm
@@ -78,6 +79,58 @@ def fa_digits(text):
             keep = False
         out.append(ch if keep else ch.translate(_DIGITS))
     return "".join(out)
+
+
+
+ZWNJ = "‌"
+
+_LETTERS = {"ي": "ی", "ك": "ک", "ة": "ه",
+            "٠": "۰", "١": "۱", "٢": "۲",
+            "٣": "۳", "٤": "۴", "٥": "۵",
+            "٦": "۶", "٧": "۷", "٨": "۸",
+            "٩": "۹"}
+
+_PREFIX = ("می", "نمی")            # می، نمی
+_SUFFIX = ("ها", "های", "هایی",
+           "تر", "ترین")     # ها، های، هایی، تر، ترین
+
+
+def normalize(text):
+    """Everything the machine can decide on its own: Arabic letters that look
+    Persian, Arabic-Indic digits, the wrong comma and question mark, straight
+    quotes, doubled spaces, a space before punctuation, and the half-space that
+    Persian words need in order not to fuse."""
+    for a, b in _LETTERS.items():
+        text = text.replace(a, b)
+    text = fa_quotes(text)
+    text = text.replace(",", "،").replace(";", "؛").replace("?", "؟")
+    for pre in _PREFIX:
+        text = re.sub(r"(?<![\w؀-ۿ])" + pre + r" (?=[؀-ۿ])",
+                      pre + ZWNJ, text)
+    for suf in _SUFFIX:
+        text = re.sub(r"(?<=[؀-ۿ]) " + suf +
+                      r"(?![\w؀-ۿ])", ZWNJ + suf, text)
+    text = re.sub(r"\s+([،؛؟.:!])", r"\1", text)
+    text = re.sub(r"\.{3,}", "…", text)
+    text = re.sub(r"[ ]{2,}", " ", text)
+    return text
+
+
+def check_text(text):
+    """What normalize() cannot decide — reported, not changed."""
+    out = []
+    if re.search(r"می‌?باشد", text):
+        out.append("«می‌باشد» — use «است»")
+    for word in ("بدینوسیله",
+                 "در راستای",
+                 "مورد بررسی"):
+        if word in text:
+            out.append("translated phrasing: " + word)
+    if text.count("—") > 1:
+        out.append("more than one em dash in one passage")
+    if re.search(r"\d,\d{3}", text) and "$" not in text:
+        out.append("Latin thousands separator in Persian prose — use ٬")
+    return out
 
 
 def _rtl_paragraph(p):
@@ -164,7 +217,7 @@ class PersianDoc:
         p.paragraph_format.space_after = Pt(space_after)
         _rtl_paragraph(p)
         _jc(p, align)
-        text = fa_quotes(text)
+        text = normalize(text)
         run = p.add_run(fa_digits(text) if self.digits else text)
         run.bold = bold
         if size:
