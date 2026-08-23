@@ -33,7 +33,7 @@ suffixes · بی/هم prefixes.
 
 - **Comma is ، not ,** and semicolon is ؛ not ;. **auto**
   - Except between Latin characters: a street address or an English date keeps
-    its Latin comma. «8185 Yonge Street، Unit 201» is wrong on a legal
+    its Latin comma. «742 Maple Grove Road، Unit 12» is wrong on a legal
     document, and the reader sees it immediately. **auto**
 - **Question mark is ؟ not ?** **auto**
 - **Quotes are « » not " "** — and nothing else. Not “ ”, not ' '. **auto**
