@@ -208,6 +208,13 @@ os.environ["PERSIAN_DOCX_TITLE_FONT"] = "Lalezar"   # headings
 os.environ["PERSIAN_DOCX_FONT"] = "Estedad"         # body
 ```
 
+`PersianDoc(kind="contract")` sets the body size and leading that Persian
+practice expects — see `KINDS`, and `reference-fonts-fa.md` for where the
+numbers come from and what changes for a letter, a thesis, a book or the web.
+Persian is set 1–3 points larger than Latin and needs more leading; getting
+those two numbers wrong is what makes a Persian page look foreign before a
+single word is read.
+
 ## Explaining a document to its own reader
 
 `d.note("...")` writes a red indented line under a clause saying what that

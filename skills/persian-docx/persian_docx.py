@@ -70,6 +70,20 @@ FREE_FONTS = {
     "Lalezar":   "headings only; single weight, high contrast",
 }
 
+# Body size and leading by document type. Persian is set 1-3 points larger than
+# Latin at the same apparent size - the letterforms sit smaller inside the em
+# and the dots that tell letters apart are what you lose first. Leading is
+# larger too: Persian ascenders and descenders reach further than Latin ones
+# (W3C alreq), so 1.0 collides.
+KINDS = {
+    "contract": (12, 1.5),   # printed, signed, read by a notary or a lawyer
+    "letter":   (13, 1.5),   # نامهٔ اداری
+    "thesis":   (13, 1.5),   # Irandoc راه, table 3-1
+    "book":     (13.5, 1.3),  # narrower measure, tighter leading
+    "report":   (12, 1.5),
+}
+
+
 NOTE_COLOR = RGBColor(0xC0, 0x00, 0x00)
 
 
@@ -382,15 +396,18 @@ def _rtl_run(run, font=None):
 
 
 class PersianDoc:
-    def __init__(self, title=None, digits=True, audience=None):
+    def __init__(self, title=None, digits=True, audience=None, kind="report"):
         """audience: "iran", "abroad", or None to leave month handling alone.
-        It decides month names and nothing else — see month_style()."""
+        It decides month names and nothing else — see month_style().
+        kind: which document this is — see KINDS. It sets body size and
+        leading, the two numbers Persian readers notice first."""
         self.doc = Document()
         self.digits = digits
         self.audience = audience
+        self.size, self.leading = KINDS.get(kind, KINDS["report"])
         st = self.doc.styles["Normal"]
         st.font.name = FONT
-        st.font.size = Pt(12)
+        st.font.size = Pt(self.size)
         st.element.rPr.rFonts.set(qn("w:cs"), FONT)
         st.element.rPr.rFonts.set(qn("w:eastAsia"), FALLBACK)
         for s in self.doc.sections:
@@ -430,6 +447,7 @@ class PersianDoc:
              align="start", font=None):
         p = self.doc.add_paragraph(style=style)
         p.paragraph_format.space_after = Pt(space_after)
+        p.paragraph_format.line_spacing = self.leading
         _rtl_paragraph(p)
         _jc(p, align)
         text = normalize(text)
@@ -487,7 +505,7 @@ class PersianDoc:
         to the reader, in plain Persian. It is commentary, not contract text —
         the colour and the indent are what tell the two apart on paper."""
         p = self._add("◄ " + text, align="both", space_after=10,
-                      size=10.5)
+                      size=self.size - 1.5)
         p.paragraph_format.left_indent = Cm(1.2)
         p.paragraph_format.right_indent = Cm(1.2)
         for r in p.runs:
