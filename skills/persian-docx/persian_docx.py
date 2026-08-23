@@ -15,7 +15,7 @@ import os
 import re
 import glob
 from docx import Document
-from docx.shared import Pt, Cm
+from docx.shared import Pt, Cm, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
@@ -55,6 +55,22 @@ def fonts_present(*names):
                 if n.lower().replace(" ", "").rstrip("s") in base:
                     found.add(n)
     return {n: (n in found) for n in names}
+
+
+# Free to use and redistribute (SIL OFL 1.1), verified August 2026. Anything
+# outside this list — IRANSans, IRANYekan, Dana, Yekan Bakh, Kalameh, Morabba,
+# Ravi — is sold by fontiran.com and must be licensed. The "B" family (B Titr,
+# B Nazanin, B Mitra, B Lotus) carries a copyright notice with no obtainable
+# licence: it ships with pirated Office packs across Iran, so never embed it in
+# a document that leaves the building.
+FREE_FONTS = {
+    "Vazirmatn": "body and headings; 9 weights; actively maintained",
+    "Estedad":   "body; tighter than Vazirmatn, good for dense legal text",
+    "Sahel":     "body; wider counters",
+    "Lalezar":   "headings only; single weight, high contrast",
+}
+
+NOTE_COLOR = RGBColor(0xC0, 0x00, 0x00)
 
 
 _EN_MONTHS = ("January", "February", "March", "April", "May", "June", "July",
@@ -464,6 +480,19 @@ class PersianDoc:
                       align="both" if justify else "start", space_after=4)
         p.paragraph_format.left_indent = Cm(0.8)
         p.paragraph_format.right_indent = Cm(0.8)
+        return p
+
+    def note(self, text):
+        """A red explanatory line under a clause: what this clause actually does
+        to the reader, in plain Persian. It is commentary, not contract text —
+        the colour and the indent are what tell the two apart on paper."""
+        p = self._add("◄ " + text, align="both", space_after=10,
+                      size=10.5)
+        p.paragraph_format.left_indent = Cm(1.2)
+        p.paragraph_format.right_indent = Cm(1.2)
+        for r in p.runs:
+            r.font.color.rgb = NOTE_COLOR
+            r.italic = True
         return p
 
     def page_break(self):

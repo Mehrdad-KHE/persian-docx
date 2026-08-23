@@ -170,27 +170,58 @@ will too, and the sentence goes back.
 
 ## Fonts
 
-**Vazirmatn** for body and headings by default — SIL OFL, free to use and
-redistribute: https://github.com/rastikerdar/vazirmatn/releases
+**Only four Persian faces are free to use and redistribute** (SIL OFL 1.1,
+checked August 2026). `FREE_FONTS` in the module holds the same list:
+
+| family | use | source |
+|---|---|---|
+| **Vazirmatn** | body and headings, 9 weights, actively maintained | github.com/rastikerdar/vazirmatn/releases |
+| **Estedad** | body — tighter than Vazirmatn, better for dense legal text | github.com/aminabedi68/Estedad/releases |
+| **Sahel** | body — wider counters | github.com/rastikerdar/sahel-font/releases |
+| **Lalezar** | headings only — one weight, high contrast | fonts.google.com/specimen/Lalezar |
+
+Every other Persian face you will be asked for is **not** free. IRANSans,
+IRANSansX, IRANYekan, Dana, Yekan Bakh, Kalameh, Morabba and Ravi are sold by
+fontiran.com and need a purchased licence. **B Titr, B Nazanin, B Mitra and
+B Lotus** — the faces most Persian "best fonts" articles recommend — carry a
+copyright notice with no licence anyone can buy; they travel with pirated
+Office packs. Use them on your own machine if you have them, never embed them
+in a file that leaves the building, and never ship them with a skill.
+
+Pairing, when a document needs two faces:
+- **Vazirmatn Black for headings over Vazirmatn Regular body** — one family, no
+  metric mismatch, nothing extra to install. This is the default.
+- **Lalezar headings over Vazirmatn or Estedad body** when the headings should
+  carry real contrast.
 
 A document names a font; it does not carry it. If the reader's machine lacks
-Vazirmatn, Word substitutes and the page stops looking Persian. Check first and
-say so rather than shipping silently:
+the face, Word substitutes and the page stops looking Persian. Check first:
 
 ```python
 from persian_docx import fonts_present
-fonts_present()          # {"Vazirmatn": True}
+fonts_present("Vazirmatn", "Lalezar")     # {"Vazirmatn": True, "Lalezar": True}
 ```
-
-To set a display face for headings — only one you hold a licence for; **B Titr
-and most Persian display faces are not free to redistribute**:
 
 ```python
-import os; os.environ["PERSIAN_DOCX_TITLE_FONT"] = "B Titr"
+import os
+os.environ["PERSIAN_DOCX_TITLE_FONT"] = "Lalezar"   # headings
+os.environ["PERSIAN_DOCX_FONT"] = "Estedad"         # body
 ```
 
-or set `FONT` / `TITLE_FONT` in the module. Nothing else in the skill is
-machine-specific.
+## Explaining a document to its own reader
+
+`d.note("...")` writes a red indented line under a clause saying what that
+clause **does to the reader**, with a concrete example. It is commentary, not
+contract text, and the colour is what keeps the two apart on paper.
+
+```python
+d.h2("مادهٔ ۳ — سهام")
+d.p("هر طرف ۵۰ درصد سهام دارد.")
+d.note("یعنی هیچ‌کدام به‌تنهایی تصمیم نمی‌گیرد. مثال: بخواهی مدیر را عوض کنی و طرف مقابل مخالف باشد، کار می‌خوابد.")
+```
+
+A note that restates the clause is worth nothing. Write the consequence, and
+give one example with real numbers or a real situation.
 
 ## Check it
 
