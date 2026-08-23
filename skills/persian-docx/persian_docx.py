@@ -182,6 +182,10 @@ def normalize(text):
         text = text.replace(a, b)
     text = fa_quotes(text)
     text = text.replace(",", "،").replace(";", "؛").replace("?", "؟")
+    # A comma standing between two Latin characters belongs to the Latin text
+    # around it - a street address or an English date - and a Persian comma
+    # there is simply wrong: "8185 Yonge Street، Unit 201".
+    text = re.sub(r"(?<=[A-Za-z0-9])،(?=\s*[A-Za-z0-9])", ",", text)
     for pre in _PREFIX:
         text = re.sub(r"(?<![\w؀-ۿ])" + pre + r" (?=[ء-ی])",
                       pre + ZWNJ, text)
