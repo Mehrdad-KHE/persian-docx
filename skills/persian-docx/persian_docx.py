@@ -543,7 +543,7 @@ class PersianDoc:
         """A red explanatory line under a clause: what this clause actually does
         to the reader, in plain Persian. It is commentary, not contract text —
         the colour and the indent are what tell the two apart on paper."""
-        p = self._add("◄ " + text, align="both", space_after=10,
+        p = self._add(BULLET + " " + text, align="both", space_after=10,
                       size=self.size - 1.5)
         p.paragraph_format.left_indent = Cm(1.2)
         p.paragraph_format.right_indent = Cm(1.2)
