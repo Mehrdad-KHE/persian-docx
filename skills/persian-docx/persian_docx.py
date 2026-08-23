@@ -70,6 +70,24 @@ _FR_MONTHS = ("janvier", "février", "mars", "avril", "mai", "juin",
               "décembre")
 
 
+# Persian speakers write the English month names as they say them, and the
+# spelling from a textbook is not the one that turns up in a real document.
+_FA_ALIASES = {
+    "ژانویه": 0, "جانویه": 0, "ژانویه‌": 0,
+    "فوریه": 1, "فبروری": 1,
+    "مارس": 2, "مارچ": 2,
+    "آوریل": 3, "آپریل": 3,
+    "مه": 4, "می": 4, "مای": 4,
+    "ژوئن": 5, "جون": 5,
+    "ژوئیه": 6, "جولای": 6, "جولایی": 6,
+    "آگوست": 7, "اوت": 7, "آگست": 7,
+    "سپتامبر": 8, "سپتمبر": 8,
+    "اکتبر": 9, "اکتوبر": 9,
+    "نوامبر": 10, "نومبر": 10,
+    "دسامبر": 11, "دسمبر": 11,
+}
+
+
 _DIGITS = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
 
 
@@ -135,7 +153,7 @@ def normalize(text):
     text = fa_quotes(text)
     text = text.replace(",", "،").replace(";", "؛").replace("?", "؟")
     for pre in _PREFIX:
-        text = re.sub(r"(?<![\w؀-ۿ])" + pre + r" (?=[؀-ۿ])",
+        text = re.sub(r"(?<![\w؀-ۿ])" + pre + r" (?=[ء-ی])",
                       pre + ZWNJ, text)
     for suf in _SUFFIX:
         text = re.sub(r"(?<=[؀-ۿ]) " + suf +
@@ -262,11 +280,16 @@ def en_date(text):
     that against the English original. This rewrites the whole date: month,
     order, digits and comma together.
     """
-    names = "|".join(_EN_MONTHS + _FA_MONTHS)
+    names = "|".join(_EN_MONTHS + _FA_MONTHS + tuple(_FA_ALIASES))
     d = r"[0-9۰-۹]"
 
     def build(mon, day, year):
         low = mon.lower()
+        if low in _FA_ALIASES:
+            i = _FA_ALIASES[low]
+            return "%s %s, %s" % (_EN_MONTHS[i],
+                                  day.translate(_TO_EN_DIGITS).lstrip("0") or "0",
+                                  year.translate(_TO_EN_DIGITS))
         for group in (_EN_MONTHS, _FA_MONTHS):
             for i, n in enumerate(group):
                 if n.lower() == low:
@@ -285,6 +308,12 @@ def en_date(text):
               r"{1,2})\s*[،,]?\s*(?P<year>" + d + r"{4})")
     text = re.sub(pat_en, lambda m: build(m.group("mon"), m.group("day"),
                                           m.group("year")), text, flags=re.I)
+    # A month with no day is still a date: "جولای ۲۰۲۶" has to become "July 2026",
+    # not "July ۲۰۲۶".
+    pat_my = (r"(?P<mon>" + names + r")\s+(?:سال\s+)?(?P<year>" + d + r"{4})")
+    text = re.sub(pat_my, lambda m: build(m.group("mon"), "1",
+                                          m.group("year")).replace(" 1,", ""),
+                  text, flags=re.I)
     return text
 
 
