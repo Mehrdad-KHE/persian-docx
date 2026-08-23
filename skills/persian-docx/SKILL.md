@@ -98,6 +98,38 @@ paragraph can be cut without loss, cut it.
 email address, a file path, a clause label, a technical term with no Persian
 equal. Everything else in Persian.
 
+## Where does this document live? — ask before you write
+
+A Persian document written for Tehran and a Persian document written for Toronto
+are not the same document. The difference is not tone, it is fact: month names,
+calendar, currency and which text governs.
+
+```python
+from persian_docx import detect_audience, month_style
+detect_audience(text)      # "iran" | "abroad" | "unknown"
+PersianDoc(audience="abroad")   # months converted as the document is built
+```
+
+`detect_audience` reads the markers already in the text — تهران، ریال، قانون
+مدنی، کد ملی، شمسی on one side; Ontario, CAD, HST, Inc., کانادا, دلار on the
+other. **When it returns `unknown`, ask the owner. Never guess** — a wrong month
+on a document an office must act on cannot be checked against its source.
+
+| | inside Iran | outside |
+|---|---|---|
+| months | Persian names | the language of the country the paper lives in |
+| calendar | Jalali is what the reader expects | keep the source's Gregorian date, unchanged |
+| currency | ریال / تومان | named in full: `CAD 78,000` |
+| governing text | the Persian is the contract | the Persian is a translation — say so at the top |
+
+`convert_months(text, to="fa"|"en"|"fr")` translates the names in either
+direction and leaves digits and order alone, so a date never stops matching its
+original. French only for a document genuinely bound for Quebec or France —
+Canada being bilingual is not a reason.
+
+For a translated contract, put the governing-text line at the top:
+«متن انگلیسی مبنای امضا و تفسیر است؛ این ترجمه برای فهم طرفین تهیه شده است.»
+
 **Months — the rule has two halves, and using the wrong half is a real error.**
 - **Persian month names** (آگوست, سپتامبر, نوامبر) belong in prose written *for*
   the owner: a report, an explanation, a summary of what happened.

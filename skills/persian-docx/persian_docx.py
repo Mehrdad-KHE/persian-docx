@@ -133,6 +133,82 @@ def check_text(text):
     return out
 
 
+
+# ---------------------------------------------------------------- audience --
+
+IRAN_MARKERS = (
+    "تهران", "ایران",           # تهران، ایران
+    "ریال", "تومان",                   # ریال، تومان
+    "قانون مدنی",                      # قانون مدنی
+    "کد ملی", "شماره ملی",
+    "ثبت احوال", "شمسی",
+    "دفترخانه",
+)
+
+ABROAD_MARKERS = (
+    "Ontario", "Canada", "CRA", "GST", "HST", "CAD", "USD", "EUR", "LLC",
+    "Inc.", "GmbH", "کانادا", "تورنتو",
+    "انتاریو", "دلار", "یورو",
+)
+
+_EN_MONTHS = ("January", "February", "March", "April", "May", "June", "July",
+              "August", "September", "October", "November", "December")
+_FA_MONTHS = ("ژانویه", "فوریه",
+              "مارس", "آوریل",
+              "مه", "ژوئن", "ژوئیه",
+              "آگوست", "سپتامبر",
+              "اکتبر", "نوامبر",
+              "دسامبر")
+_FR_MONTHS = ("janvier", "février", "mars", "avril", "mai", "juin",
+              "juillet", "août", "septembre", "octobre", "novembre",
+              "décembre")
+
+
+def detect_audience(text):
+    """Is this document going to be read inside Iran or outside it? The answer
+    changes the month names, the currency and the calendar. Returns
+    "iran", "abroad", or "unknown" — and unknown means ask, never guess."""
+    lower = text.lower()
+    iran = sum(1 for m in IRAN_MARKERS if m in text)
+    abroad = sum(1 for m in ABROAD_MARKERS if m.lower() in lower)
+    if iran > abroad and iran:
+        return "iran"
+    if abroad > iran and abroad:
+        return "abroad"
+    return "unknown"
+
+
+def month_style(audience):
+    """Which month names belong in this document.
+
+    iran    → Persian names, and a Jalali date is what the reader expects.
+    abroad  → the month name in the language of the country the paper lives in.
+              A Persian month on a document a foreign office must act on cannot
+              be checked against its source, which is worse than useless.
+    Never French unless the document is genuinely for Quebec or France; Canada
+    being bilingual is not a reason.
+    """
+    return {"iran": "fa", "abroad": "en"}.get(audience, "ask")
+
+
+def convert_months(text, to="en"):
+    """Translate month names between Persian, English and French. Only the
+    names — a date's digits and order are left alone, because a date that stops
+    matching its source is a date nobody can verify."""
+    tables = {"fa": _FA_MONTHS, "en": _EN_MONTHS, "fr": _FR_MONTHS}
+    target = tables[to]
+    # A month name must stand as its own word. Without this, Persian "مه" (May)
+    # eats the middle of "مهلت" and the document quietly turns to nonsense.
+    letters = r"A-Za-zÀ-ſ؀-ۿ"
+    for group in tables.values():
+        if group is target:
+            continue
+        for i, name in enumerate(group):
+            pat = r"(?<![" + letters + r"])" + re.escape(name) + r"(?![" + letters + r"])"
+            text = re.sub(pat, target[i], text, flags=re.IGNORECASE)
+    return text
+
+
 def _rtl_paragraph(p):
     pPr = p._p.get_or_add_pPr()
     bidi = OxmlElement("w:bidi")
@@ -170,9 +246,12 @@ def _rtl_run(run, font=None):
 
 
 class PersianDoc:
-    def __init__(self, title=None, digits=True):
+    def __init__(self, title=None, digits=True, audience=None):
+        """audience: "iran", "abroad", or None to leave month handling alone.
+        It decides month names and nothing else — see month_style()."""
         self.doc = Document()
         self.digits = digits
+        self.audience = audience
         st = self.doc.styles["Normal"]
         st.font.name = FONT
         st.font.size = Pt(12)
@@ -218,6 +297,10 @@ class PersianDoc:
         _rtl_paragraph(p)
         _jc(p, align)
         text = normalize(text)
+        if self.audience in ("iran", "abroad"):
+            style = month_style(self.audience)
+            if style in ("fa", "en"):
+                text = convert_months(text, to=style)
         run = p.add_run(fa_digits(text) if self.digits else text)
         run.bold = bold
         if size:
