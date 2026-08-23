@@ -123,9 +123,11 @@ on a document an office must act on cannot be checked against its source.
 | currency | ریال / تومان | named in full: `CAD 12,500` |
 | governing text | the Persian is the contract | the Persian is a translation — say so at the top |
 
-`convert_months(text, to="fa"|"en"|"fr")` translates the names in either
-direction and leaves digits and order alone, so a date never stops matching its
-original. French only for a document genuinely bound for Quebec or France —
+`convert_months(text, to="fa"|"en"|"fr")` translates the month name only.
+**Never use it alone on a date.** A month name in one language beside digits
+in another — «August ۲۳، ۲۰۲۶» — matches no source and no reader. `PersianDoc`
+calls `en_date()` or `fa_date()` after it, which rewrite the whole date —
+month, order, digits and comma together. Do the same if you convert by hand. French only for a document genuinely bound for Quebec or France —
 Canada being bilingual is not a reason.
 
 For a translated contract, put the governing-text line at the top:

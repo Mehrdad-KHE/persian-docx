@@ -250,6 +250,44 @@ def fa_date(text):
     return re.sub(pat, swap, text, flags=re.IGNORECASE)
 
 
+_TO_EN_DIGITS = str.maketrans("۰۱۲۳۴۵۶۷۸۹",
+                              "0123456789")
+
+
+def en_date(text):
+    """English word order for a date on a document a foreign office will act on.
+
+    Converting only the month name leaves "August ۲۳، ۲۰۲۶" - an English
+    month, Persian digits and a Persian comma. A bank or a lawyer cannot check
+    that against the English original. This rewrites the whole date: month,
+    order, digits and comma together.
+    """
+    names = "|".join(_EN_MONTHS + _FA_MONTHS)
+    d = r"[0-9۰-۹]"
+
+    def build(mon, day, year):
+        low = mon.lower()
+        for group in (_EN_MONTHS, _FA_MONTHS):
+            for i, n in enumerate(group):
+                if n.lower() == low:
+                    return "%s %s, %s" % (_EN_MONTHS[i],
+                                          day.translate(_TO_EN_DIGITS).lstrip("0") or "0",
+                                          year.translate(_TO_EN_DIGITS))
+        return mon
+
+    # Persian order: 23am August year 2026 / 23 August 2026
+    pat_fa = (r"(?P<day>" + d + r"{1,2})\s*(?:ام)?\s+(?P<mon>" + names +
+              r")\s+(?:سال\s+)?(?P<year>" + d + r"{4})")
+    text = re.sub(pat_fa, lambda m: build(m.group("mon"), m.group("day"),
+                                          m.group("year")), text, flags=re.I)
+    # English order, any digits or comma
+    pat_en = (r"(?P<mon>" + names + r")\s+(?P<day>" + d +
+              r"{1,2})\s*[،,]?\s*(?P<year>" + d + r"{4})")
+    text = re.sub(pat_en, lambda m: build(m.group("mon"), m.group("day"),
+                                          m.group("year")), text, flags=re.I)
+    return text
+
+
 def mixed_dates(text):
     """Report dates that mix the two languages — an English month name sitting
     beside Persian digits, or a Persian month beside Latin ones."""
@@ -354,8 +392,9 @@ class PersianDoc:
             style = month_style(self.audience)
             if style in ("fa", "en"):
                 text = convert_months(text, to=style)
-            if style == "fa":
-                text = fa_date(text)
+            # Half a conversion is worse than none: the month name alone leaves
+            # a date in two languages that matches neither source.
+            text = fa_date(text) if style == "fa" else en_date(text)
         run = p.add_run(fa_digits(text) if self.digits else text)
         run.bold = bold
         if size:
