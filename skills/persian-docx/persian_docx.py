@@ -278,72 +278,100 @@ def convert_months(text, to="en"):
 
 
 
+_TO_EN_DIGITS = str.maketrans("۰۱۲۳۴۵۶۷۸۹", "0123456789")
+
+
 _FA_DIGITS_RE = "[۰-۹]"
 
 
 def fa_date(text):
-    """Persian word order for a date written in Persian prose.
+    """Persian word order for a date a Persian reader reads.
 
-    "August ۲۳، ۲۰۲۶" is the worst of both languages: an English
-    month name, Persian digits and American word order. In Persian the day
-    comes first and the year is introduced: ۲۳ام آگوست سال ۲۰۲۶.
-    """
-    names = "|".join(_EN_MONTHS)
-    def swap(m):
-        mon, day, year = m.group("mon"), m.group("day"), m.group("year")
-        i = [n.lower() for n in _EN_MONTHS].index(mon.lower())
-        return "%sام %s سال %s" % (day, _FA_MONTHS[i], year)
-    pat = (r"(?P<mon>" + names + r")\s+(?P<day>" + _FA_DIGITS_RE +
-           r"{1,2})\s*[،,]?\s*(?P<year>" + _FA_DIGITS_RE + r"{4})")
-    return re.sub(pat, swap, text, flags=re.IGNORECASE)
-
-
-_TO_EN_DIGITS = str.maketrans("۰۱۲۳۴۵۶۷۸۹",
-                              "0123456789")
-
-
-def en_date(text):
-    """English word order for a date on a document a foreign office will act on.
-
-    Converting only the month name leaves "August ۲۳، ۲۰۲۶" - an English
-    month, Persian digits and a Persian comma. A bank or a lawyer cannot check
-    that against the English original. This rewrites the whole date: month,
-    order, digits and comma together.
+    In Persian the day comes first and the year is introduced: ۲۳ام آگوست
+    سال ۲۰۲۶. Anything less than the whole date - month name, order,
+    digits - leaves a hybrid that belongs to neither language.
     """
     names = "|".join(_EN_MONTHS + _FA_MONTHS + tuple(_FA_ALIASES))
     d = r"[0-9۰-۹]"
 
-    def build(mon, day, year):
+    def idx(mon):
         low = mon.lower()
         if low in _FA_ALIASES:
-            i = _FA_ALIASES[low]
-            return "%s %s, %s" % (_EN_MONTHS[i],
-                                  day.translate(_TO_EN_DIGITS).lstrip("0") or "0",
-                                  year.translate(_TO_EN_DIGITS))
+            return _FA_ALIASES[low]
         for group in (_EN_MONTHS, _FA_MONTHS):
             for i, n in enumerate(group):
                 if n.lower() == low:
-                    return "%s %s, %s" % (_EN_MONTHS[i],
-                                          day.translate(_TO_EN_DIGITS).lstrip("0") or "0",
-                                          year.translate(_TO_EN_DIGITS))
-        return mon
+                    return i
+        return None
 
-    # Persian order: 23am August year 2026 / 23 August 2026
-    pat_fa = (r"(?P<day>" + d + r"{1,2})\s*(?:ام)?\s+(?P<mon>" + names +
-              r")\s+(?:سال\s+)?(?P<year>" + d + r"{4})")
-    text = re.sub(pat_fa, lambda m: build(m.group("mon"), m.group("day"),
-                                          m.group("year")), text, flags=re.I)
-    # English order, any digits or comma
+    def build(mon, day, year):
+        i = idx(mon)
+        if i is None:
+            return mon
+        year = year.translate(_DIGITS)
+        if day is None:
+            return "%s سال %s" % (_FA_MONTHS[i], year)
+        day = str(int(day.translate(_TO_EN_DIGITS))).translate(_DIGITS)
+        return "%sام %s سال %s" % (day, _FA_MONTHS[i], year)
+
+    # English order first: August 23, 2026
     pat_en = (r"(?P<mon>" + names + r")\s+(?P<day>" + d +
               r"{1,2})\s*[،,]?\s*(?P<year>" + d + r"{4})")
     text = re.sub(pat_en, lambda m: build(m.group("mon"), m.group("day"),
                                           m.group("year")), text, flags=re.I)
-    # A month with no day is still a date: "جولای ۲۰۲۶" has to become "July 2026",
-    # not "July ۲۰۲۶".
+    # Persian order, possibly already half-converted: 23 August 2026
+    pat_fa = (r"(?P<day>" + d + r"{1,2})\s*(?:ام)?\s+(?P<mon>" + names +
+              r")\s+(?:سال\s+)?(?P<year>" + d + r"{4})")
+    text = re.sub(pat_fa, lambda m: build(m.group("mon"), m.group("day"),
+                                          m.group("year")), text, flags=re.I)
+    # A month with no day still needs its own language: July 2026
     pat_my = (r"(?P<mon>" + names + r")\s+(?:سال\s+)?(?P<year>" + d + r"{4})")
-    text = re.sub(pat_my, lambda m: build(m.group("mon"), "1",
-                                          m.group("year")).replace(" 1,", ""),
-                  text, flags=re.I)
+    text = re.sub(pat_my, lambda m: build(m.group("mon"), None,
+                                          m.group("year")), text, flags=re.I)
+    return text
+
+
+def en_date(text):
+    """English form for a date on a document a foreign office will act on.
+
+    Converting only the month name leaves "August ۲۳، ۲۰۲۶" - an English month,
+    Persian digits and a Persian comma. A bank or a lawyer cannot check that
+    against the English original.
+    """
+    names = "|".join(_EN_MONTHS + _FA_MONTHS + tuple(_FA_ALIASES))
+    d = r"[0-9۰-۹]"
+
+    def idx(mon):
+        low = mon.lower()
+        if low in _FA_ALIASES:
+            return _FA_ALIASES[low]
+        for group in (_EN_MONTHS, _FA_MONTHS):
+            for i, n in enumerate(group):
+                if n.lower() == low:
+                    return i
+        return None
+
+    def build(mon, day, year):
+        i = idx(mon)
+        if i is None:
+            return mon
+        year = year.translate(_TO_EN_DIGITS)
+        if day is None:
+            return "%s %s" % (_EN_MONTHS[i], year)
+        return "%s %d, %s" % (_EN_MONTHS[i], int(day.translate(_TO_EN_DIGITS)),
+                              year)
+
+    pat_fa = (r"(?P<day>" + d + r"{1,2})\s*(?:ام)?\s+(?P<mon>" + names +
+              r")\s+(?:سال\s+)?(?P<year>" + d + r"{4})")
+    text = re.sub(pat_fa, lambda m: build(m.group("mon"), m.group("day"),
+                                          m.group("year")), text, flags=re.I)
+    pat_en = (r"(?P<mon>" + names + r")\s+(?P<day>" + d +
+              r"{1,2})\s*[،,]?\s*(?P<year>" + d + r"{4})")
+    text = re.sub(pat_en, lambda m: build(m.group("mon"), m.group("day"),
+                                          m.group("year")), text, flags=re.I)
+    pat_my = (r"(?P<mon>" + names + r")\s+(?:سال\s+)?(?P<year>" + d + r"{4})")
+    text = re.sub(pat_my, lambda m: build(m.group("mon"), None,
+                                          m.group("year")), text, flags=re.I)
     return text
 
 
@@ -354,7 +382,7 @@ def mixed_dates(text):
     names = "|".join(_EN_MONTHS)
     for m in re.finditer(r"(?:" + names + r")\s*" + _FA_DIGITS_RE, text, re.I):
         out.append("English month with Persian digits: " + m.group(0))
-    for m in re.finditer(r"(?:" + "|".join(_FA_MONTHS) + r")\s*\d", text):
+    for m in re.finditer(r"(?:" + "|".join(_FA_MONTHS) + r")\s*[0-9]", text):
         out.append("Persian month with Latin digits: " + m.group(0))
     return out
 
@@ -396,14 +424,21 @@ def _rtl_run(run, font=None):
 
 
 class PersianDoc:
-    def __init__(self, title=None, digits=True, audience=None, kind="report"):
+    def __init__(self, title=None, digits=True, audience=None, kind="report",
+                 dates=None):
         """audience: "iran", "abroad", or None to leave month handling alone.
         It decides month names and nothing else — see month_style().
         kind: which document this is — see KINDS. It sets body size and
-        leading, the two numbers Persian readers notice first."""
+        leading, the two numbers Persian readers notice first.
+        dates: "fa" or "en", overriding audience. The date follows the language
+        the document is READ in, not the country it is filed in. A Persian
+        translation of an Ontario contract is read in Persian — its dates
+        belong in Persian, even though the English original that gets signed
+        keeps August 23, 2026."""
         self.doc = Document()
         self.digits = digits
         self.audience = audience
+        self.dates = dates
         self.size, self.leading = KINDS.get(kind, KINDS["report"])
         st = self.doc.styles["Normal"]
         st.font.name = FONT
@@ -451,10 +486,10 @@ class PersianDoc:
         _rtl_paragraph(p)
         _jc(p, align)
         text = normalize(text)
-        if self.audience in ("iran", "abroad"):
-            style = month_style(self.audience)
-            if style in ("fa", "en"):
-                text = convert_months(text, to=style)
+        style = self.dates or (month_style(self.audience)
+                               if self.audience in ("iran", "abroad") else None)
+        if style in ("fa", "en"):
+            text = convert_months(text, to=style)
             # Half a conversion is worse than none: the month name alone leaves
             # a date in two languages that matches neither source.
             text = fa_date(text) if style == "fa" else en_date(text)

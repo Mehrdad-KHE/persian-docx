@@ -130,6 +130,13 @@ calls `en_date()` or `fa_date()` after it, which rewrite the whole date —
 month, order, digits and comma together. Do the same if you convert by hand. French only for a document genuinely bound for Quebec or France —
 Canada being bilingual is not a reason.
 
+**The date follows the language the document is READ in, not the country it is
+filed in.** A Persian translation of an Ontario contract is read in Persian, so
+its dates are Persian — «۲۳ام آگوست سال ۲۰۲۶» — while the English original that
+gets signed keeps `August 23, 2026`. Override the audience default with
+`PersianDoc(dates="fa")` or `dates="en"`; `fa_date()` and `en_date()` convert
+in either direction and rewrite the whole date, never just the month.
+
 For a translated contract, put the governing-text line at the top:
 «متن انگلیسی مبنای امضا و تفسیر است؛ این ترجمه برای فهم طرفین تهیه شده است.»
 
