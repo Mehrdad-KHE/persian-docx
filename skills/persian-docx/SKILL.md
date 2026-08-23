@@ -26,10 +26,10 @@ sys.path.insert(0, os.path.dirname(__file__))   # the folder this SKILL.md is in
 from persian_docx import PersianDoc
 
 d = PersianDoc()
-d.title("قراردادِ نمونه")
-d.h2("بخش ۱ — طرفین")
-d.p("این قرارداد میان [نامِ طرفِ اول] و [نامِ طرفِ دوم] بسته می‌شود.")
-d.bullet("مالکیتِ نرم‌افزار منتقل نمی‌شود.")
+d.title("راهنمای بازدید از باغِ گیاه‌شناسی")
+d.h2("۱. ساعتِ بازدید")
+d.p("باغ هر روز از ساعتِ ۹ صبح تا ۶ عصر باز است، جز روزهای [تعطیلات].")
+d.bullet("بلیتِ گروهی برای بیش از ۱۰ نفر ۲۰ درصد تخفیف دارد.")
 d.page_break()
 d.save("out.docx")
 ```
@@ -146,8 +146,8 @@ For a translated contract, put the governing-text line at the top:
 
 **In a legal or contractual document, add one line under each clause saying what
 that clause actually does.** The reader should never have to decode a clause to
-learn its effect. That line is Persian, plain, and about consequence — «اگر این
-بند نباشد، نصفِ دارایی مالِ طرفِ مقابل می‌شود» beats a restatement of the clause.
+learn its effect. That line is Persian, plain, and about consequence — «اگر این بند نباشد،
+مستأجر می‌تواند بی‌اطلاع قرارداد را واگذار کند» beats a restatement of the clause.
 
 **Say the number.** «مبلغِ قابلِ توجهی» tells the reader nothing; «۷۸ هزار دلار»
 tells them everything. Where the number is not known yet, leave the `[...]`
